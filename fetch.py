@@ -8,15 +8,33 @@ import yfinance as yf
 
 GOOD_STOCKS_FILE = Path("good_stocks.csv")
 STOCKS_ID_FILE = Path("stocks_ID.csv")
+PRICE_FOLDER = Path("stocks_price")
 
 
 def _load_stock_list(stock_list_path: str | os.PathLike[str]) -> pd.DataFrame:
     return pd.read_csv(stock_list_path)
 
 
+def _clear_old_price_files(folder: Path) -> int:
+    resolved_folder = folder.resolve()
+    removed = 0
+
+    if not resolved_folder.exists():
+        return 0
+
+    for path in resolved_folder.glob("*.csv"):
+        if path.is_file():
+            path.unlink()
+            removed += 1
+
+    return removed
+
+
 def fetch(stock_list_path: str | os.PathLike[str] = GOOD_STOCKS_FILE) -> dict:
-    folder = "stocks_price"
-    os.makedirs(folder, exist_ok=True)
+    PRICE_FOLDER.mkdir(parents=True, exist_ok=True)
+    removed_count = _clear_old_price_files(PRICE_FOLDER)
+    if removed_count:
+        print(f"已清除 {removed_count} 個舊股價檔案")
 
     stock_list_path = Path(stock_list_path)
     if not stock_list_path.exists():
@@ -50,7 +68,7 @@ def fetch(stock_list_path: str | os.PathLike[str] = GOOD_STOCKS_FILE) -> dict:
                 data.reset_index(inplace=True)
                 filtered = data[["Date", "Close", "Volume"]]
 
-                output_path = f"{folder}/{code}_{name}.csv"
+                output_path = PRICE_FOLDER / f"{code}_{name}.csv"
                 filtered.to_csv(output_path, header=False, index=False, encoding="utf-8-sig")
 
                 success += 1

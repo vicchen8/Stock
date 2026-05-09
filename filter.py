@@ -9,7 +9,6 @@ import pandas as pd
 
 STOCK_ID_FILE = Path("stocks_ID.csv")
 PRICE_FOLDER = Path("stocks_price")
-FILTERED_OUTPUT_FILE = Path("filtered_stocks.csv")
 
 
 @dataclass(frozen=True)
@@ -69,7 +68,6 @@ def filter_stocks(enabled_conditions: Iterable[str] | None = None) -> pd.DataFra
             continue
 
     result = pd.DataFrame(passed_rows, columns=stock_list.columns)
-    result.to_csv(FILTERED_OUTPUT_FILE, index=False, encoding="utf-8-sig")
     return result
 
 
