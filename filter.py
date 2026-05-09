@@ -24,25 +24,6 @@ CONDITIONS = {
 }
 
 
-def _get_last_value(stock: pd.DataFrame, column_index: int) -> float:
-    return stock.iloc[-1, column_index]
-
-
-def _passes_condition(stock: pd.DataFrame, condition_key: str) -> bool:
-    last_price = _get_last_value(stock, 1)
-    last_volume = _get_last_value(stock, 2)
-    last_middle = _get_last_value(stock, 4)
-    last_ma5 = _get_last_value(stock, 8)
-
-    if condition_key == "price_above_ma5":
-        return pd.notna(last_ma5) and pd.notna(last_price) and last_price >= last_ma5
-    if condition_key == "price_above_middle":
-        return pd.notna(last_middle) and pd.notna(last_price) and last_price >= last_middle
-    if condition_key == "volume_above_10m":
-        return pd.notna(last_volume) and last_volume >= 10_000_000
-    raise KeyError(f"Unknown condition: {condition_key}")
-
-
 def _iter_price_files() -> list[Path]:
     if not PRICE_FOLDER.exists():
         return []
@@ -53,8 +34,70 @@ def _parse_stock_file_name(path: Path) -> tuple[str, str]:
     stem = path.stem
     if "_" not in stem:
         return stem, ""
-    code, name = stem.split("_", 1)
-    return code, name
+    return stem.split("_", 1)
+
+
+def _load_stock_data(price_file: Path) -> pd.DataFrame:
+    stock = pd.read_csv(price_file, header=None)
+    if stock.empty:
+        return stock
+
+    # 支援兩種格式：
+    # 1. fetch 產生的 3 欄：Date, Price, Volume
+    # 2. calculate 產生的 12 欄：Date, Price, Volume, Upper, Middle, Lower, K, D, MA5, MA10, MA20, MA60
+    if stock.shape[1] >= 12:
+        stock = stock.iloc[:, :12].copy()
+        stock.columns = [
+            "Date",
+            "Price",
+            "Volume",
+            "Upper",
+            "Middle",
+            "Lower",
+            "K",
+            "D",
+            "MA5",
+            "MA10",
+            "MA20",
+            "MA60",
+        ]
+        return stock
+
+    if stock.shape[1] < 3:
+        return pd.DataFrame()
+
+    stock = stock.iloc[:, :3].copy()
+    stock.columns = ["Date", "Price", "Volume"]
+    stock["Price"] = pd.to_numeric(stock["Price"], errors="coerce")
+    stock["Volume"] = pd.to_numeric(stock["Volume"], errors="coerce")
+
+    stock["Middle"] = stock["Price"].rolling(window=30).mean()
+    stock["MA5"] = stock["Price"].rolling(window=5).mean()
+    return stock
+
+
+def _get_last_value(stock: pd.DataFrame, column_name: str) -> float:
+    return stock[column_name].iloc[-1]
+
+
+def _passes_condition(stock: pd.DataFrame, condition_key: str) -> bool:
+    last_price = _get_last_value(stock, "Price")
+    last_volume = _get_last_value(stock, "Volume")
+
+    if stock.shape[1] >= 12:
+        last_middle = _get_last_value(stock, "Middle")
+        last_ma5 = _get_last_value(stock, "MA5")
+    else:
+        last_middle = _get_last_value(stock, "Middle")
+        last_ma5 = _get_last_value(stock, "MA5")
+
+    if condition_key == "price_above_ma5":
+        return pd.notna(last_ma5) and pd.notna(last_price) and last_price >= last_ma5
+    if condition_key == "price_above_middle":
+        return pd.notna(last_middle) and pd.notna(last_price) and last_price >= last_middle
+    if condition_key == "volume_above_10m":
+        return pd.notna(last_volume) and last_volume >= 10_000_000
+    raise KeyError(f"Unknown condition: {condition_key}")
 
 
 def filter_stocks(enabled_conditions: Iterable[str] | None = None) -> pd.DataFrame:
@@ -65,7 +108,7 @@ def filter_stocks(enabled_conditions: Iterable[str] | None = None) -> pd.DataFra
         code, name = _parse_stock_file_name(price_file)
 
         try:
-            stock = pd.read_csv(price_file, header=None)
+            stock = _load_stock_data(price_file)
             if stock.empty:
                 continue
 

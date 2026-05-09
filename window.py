@@ -8,8 +8,10 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+import calculate
 import fetch
 import filter as stock_filter
+import rounder
 
 
 STATE_FILE = Path("fetch_state.json")
@@ -29,6 +31,8 @@ class StockFilterApp:
         self.fetch_running = False
         self.fetch_last_time = self._load_last_fetch_time()
         self.fetch_last_summary = self._load_last_fetch_summary()
+        self._pipeline_conditions: list[str] = self._selected_conditions()
+
         self._checkbox_off_image = None
         self._checkbox_on_image = None
 
@@ -119,7 +123,7 @@ class StockFilterApp:
 
         ttk.Separator(left, orient="horizontal").pack(fill="x", pady=12)
 
-        self.fetch_button = ttk.Button(left, text="抓取符合名單", command=self.start_fetch)
+        self.fetch_button = ttk.Button(left, text="抓取並更新", command=self.start_fetch)
         self.fetch_button.pack(fill="x", pady=4)
 
         ttk.Separator(left, orient="horizontal").pack(fill="x", pady=12)
@@ -167,7 +171,6 @@ class StockFilterApp:
         on.put("#3aa655", to=(0, 0, 1, 16))
         on.put("#3aa655", to=(15, 0, 16, 16))
         on.put("#3aa655", to=(0, 15, 16, 16))
-        # 綠色勾勾
         on.put("#3aa655", to=(4, 8, 7, 11))
         on.put("#3aa655", to=(7, 11, 13, 5))
 
@@ -194,7 +197,7 @@ class StockFilterApp:
             if labels:
                 self.filter_status_label.config(text="已啟用:\n" + "\n".join(f"• {label}" for label in labels))
             else:
-                self.filter_status_label.config(text="未勾選任何條件\n目前會顯示所有股票")
+                self.filter_status_label.config(text="未勾選任何條件\n目前會顯示所有已下載股票")
 
             self.summary_label.config(text=f"符合股票數量: {len(result)}")
         except Exception as exc:
@@ -206,7 +209,8 @@ class StockFilterApp:
 
         self.fetch_running = True
         self.fetch_button.config(state="disabled")
-        self.fetch_status_label.config(text="抓取狀態: 正在抓取...")
+        self._pipeline_conditions = self._selected_conditions()
+        self.fetch_status_label.config(text="更新狀態: 正在抓取 / 處理...")
 
         thread = threading.Thread(target=self._fetch_worker, daemon=True)
         thread.start()
@@ -214,32 +218,40 @@ class StockFilterApp:
     def _fetch_worker(self) -> None:
         error = None
         summary = None
+        filtered_result = None
         try:
             summary = fetch.fetch()
+            rounder.rounder()
+            calculate.calculate()
             self.fetch_last_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             self.fetch_last_summary = (
-                f"成功 {summary['success']} 檔，失敗 {summary['failed']} 檔，共 {summary['total']} 檔"
+                f"抓取成功 {summary['success']} 檔，失敗 {summary['failed']} 檔，共 {summary['total']} 檔"
             )
+            filtered_result = stock_filter.filter_stocks(self._pipeline_conditions)
             self._save_fetch_state()
         except Exception as exc:
             error = exc
 
-        self.root.after(0, self._finish_fetch, error, summary)
+        self.root.after(0, self._finish_fetch, error, summary, filtered_result)
 
-    def _finish_fetch(self, error: Exception | None, summary: dict | None) -> None:
+    def _finish_fetch(self, error: Exception | None, summary: dict | None, filtered_result=None) -> None:
         self.fetch_running = False
         self.fetch_button.config(state="normal")
 
         if error is not None:
-            self.fetch_status_label.config(text="抓取狀態: 抓取失敗")
-            messagebox.showerror("抓取失敗", str(error))
+            self.fetch_status_label.config(text="更新狀態: 失敗")
+            messagebox.showerror("更新失敗", str(error))
             return
+
+        if filtered_result is not None:
+            self._refresh_table(filtered_result)
+            self.summary_label.config(text=f"符合股票數量: {len(filtered_result)}")
 
         self._refresh_fetch_status_label()
         if summary is not None:
             messagebox.showinfo(
-                "抓取完成",
-                f"已完成抓取\n成功 {summary['success']} 檔，失敗 {summary['failed']} 檔，共 {summary['total']} 檔",
+                "更新完成",
+                f"已完成抓取、round、calculate、filter\n{self.fetch_last_summary}",
             )
 
     def _refresh_table(self, df) -> None:
@@ -251,11 +263,11 @@ class StockFilterApp:
 
     def _fetch_status_text(self) -> str:
         if self.fetch_running:
-            return "抓取狀態: 正在抓取..."
+            return "更新狀態: 正在處理..."
         if self.fetch_last_time:
             summary_text = f"\n{self.fetch_last_summary}" if self.fetch_last_summary else ""
-            return f"抓取狀態: 已抓取\n上次抓取時間: {self.fetch_last_time}{summary_text}"
-        return "抓取狀態: 尚未抓取"
+            return f"更新狀態: 已完成\n上次更新時間: {self.fetch_last_time}{summary_text}"
+        return "更新狀態: 尚未執行"
 
     def _refresh_fetch_status_label(self) -> None:
         self.fetch_status_label.config(text=self._fetch_status_text())
