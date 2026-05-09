@@ -20,7 +20,7 @@ STATE_FILE = Path("fetch_state.json")
 class StockFilterApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("股票篩選工具")
+        self.root.title("股票篩選器")
         self.root.geometry("1200x760")
         self.root.minsize(980, 620)
 
@@ -82,10 +82,16 @@ class StockFilterApp:
         self.filter_status_label = ttk.Label(left, text="", justify="left")
         self.filter_status_label.pack(anchor="w", pady=(0, 10))
 
+        self.fetch_progress_label = ttk.Label(left, text="抓取進度：0/0", justify="left")
+        self.fetch_progress_label.pack(anchor="w")
+
+        self.process_progress_label = ttk.Label(left, text="處理進度：0/0", justify="left")
+        self.process_progress_label.pack(anchor="w", pady=(0, 10))
+
         self.fetch_status_label = ttk.Label(left, text="", justify="left")
         self.fetch_status_label.pack(anchor="w")
 
-        result_title = ttk.Label(right, text="符合條件的股票", font=("Microsoft JhengHei", 18, "bold"))
+        result_title = ttk.Label(right, text="篩選結果", font=("Microsoft JhengHei", 18, "bold"))
         result_title.grid(row=0, column=0, sticky="w", pady=(0, 12))
 
         table_frame = ttk.Frame(right)
@@ -161,7 +167,7 @@ class StockFilterApp:
 
             labels = [stock_filter.CONDITIONS[key].label for key in selected]
             if labels:
-                self.filter_status_label.config(text="已啟用:\n" + "\n".join(f"• {label}" for label in labels))
+                self.filter_status_label.config(text="已啟用條件：\n" + "\n".join(f"• {label}" for label in labels))
             else:
                 self.filter_status_label.config(text="未勾選任何條件\n目前會顯示所有已下載股票")
 
@@ -173,10 +179,15 @@ class StockFilterApp:
         if self.fetch_running:
             return
 
+        if not messagebox.askyesno("確認更新", "是否要開始抓取並更新資料？"):
+            return
+
         self.fetch_running = True
         self.fetch_button.config(state="disabled")
         self._pipeline_conditions = self._selected_conditions()
-        self.fetch_status_label.config(text="更新狀態: 正在抓取 / 處理...")
+        self._set_fetch_status_text("更新中...")
+        self._set_fetch_progress(0, 0)
+        self._set_process_progress(0, 0)
 
         thread = threading.Thread(target=self._fetch_worker, daemon=True)
         thread.start()
@@ -186,12 +197,20 @@ class StockFilterApp:
         summary = None
         filtered_result = None
         try:
-            summary = fetch.fetch()
-            rounder.rounder()
-            calculate.calculate()
+            self._set_fetch_status_text("抓取中...")
+            summary = fetch.fetch(progress_callback=self._report_fetch_progress)
+
+            self._set_fetch_status_text("處理中：rounder")
+            self._set_process_progress(0, 0)
+            rounder.rounder(progress_callback=self._report_process_progress)
+
+            self._set_fetch_status_text("處理中：calculate")
+            self._set_process_progress(0, 0)
+            calculate.calculate(progress_callback=self._report_process_progress)
+
             self.fetch_last_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             self.fetch_last_summary = (
-                f"抓取成功 {summary['success']} 檔，失敗 {summary['failed']} 檔，共 {summary['total']} 檔"
+                f"抓取成功 {summary['success']} 筆，失敗 {summary['failed']} 筆，共 {summary['total']} 筆"
             )
             filtered_result = stock_filter.filter_stocks(self._pipeline_conditions)
             self._save_fetch_state()
@@ -205,7 +224,7 @@ class StockFilterApp:
         self.fetch_button.config(state="normal")
 
         if error is not None:
-            self.fetch_status_label.config(text="更新狀態: 失敗")
+            self._set_fetch_status_text("更新失敗")
             messagebox.showerror("更新失敗", str(error))
             return
 
@@ -220,6 +239,21 @@ class StockFilterApp:
                 f"已完成抓取、round、calculate、filter\n{self.fetch_last_summary}",
             )
 
+    def _set_fetch_status_text(self, text: str) -> None:
+        self.root.after(0, lambda: self.fetch_status_label.config(text=text))
+
+    def _set_fetch_progress(self, current: int, total: int) -> None:
+        self.root.after(0, lambda: self.fetch_progress_label.config(text=f"抓取進度：{current}/{total}"))
+
+    def _set_process_progress(self, current: int, total: int) -> None:
+        self.root.after(0, lambda: self.process_progress_label.config(text=f"處理進度：{current}/{total}"))
+
+    def _report_fetch_progress(self, current: int, total: int) -> None:
+        self._set_fetch_progress(current, total)
+
+    def _report_process_progress(self, current: int, total: int) -> None:
+        self._set_process_progress(current, total)
+
     def _refresh_table(self, df) -> None:
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -229,11 +263,11 @@ class StockFilterApp:
 
     def _fetch_status_text(self) -> str:
         if self.fetch_running:
-            return "更新狀態: 正在處理..."
+            return "更新中..."
         if self.fetch_last_time:
             summary_text = f"\n{self.fetch_last_summary}" if self.fetch_last_summary else ""
-            return f"更新狀態: 已完成\n上次更新時間: {self.fetch_last_time}{summary_text}"
-        return "更新狀態: 尚未執行"
+            return f"最後更新時間: {self.fetch_last_time}{summary_text}"
+        return "尚未更新"
 
     def _refresh_fetch_status_label(self) -> None:
         self.fetch_status_label.config(text=self._fetch_status_text())
