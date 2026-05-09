@@ -25,13 +25,13 @@ class StockFilterApp:
         self.root.minsize(980, 620)
 
         self.vars = {
-            "price_above_ma5": tk.BooleanVar(value=True),
-            "price_above_ma10": tk.BooleanVar(value=True),
-            "price_above_ma20": tk.BooleanVar(value=True),
-            "price_above_ma60": tk.BooleanVar(value=True),
-            "price_above_middle": tk.BooleanVar(value=True),
-            "price_below_middle": tk.BooleanVar(value=True),
-            "volume_above_10m": tk.BooleanVar(value=True),
+            "price_above_ma5": tk.BooleanVar(value=False),
+            "price_above_ma10": tk.BooleanVar(value=False),
+            "price_above_ma20": tk.BooleanVar(value=False),
+            "price_above_ma60": tk.BooleanVar(value=False),
+            "price_above_middle": tk.BooleanVar(value=False),
+            "price_below_middle": tk.BooleanVar(value=False),
+            "volume_above_10m": tk.BooleanVar(value=False),
         }
 
         self.fetch_running = False
@@ -58,6 +58,8 @@ class StockFilterApp:
         right.grid(row=0, column=1, sticky="nsew")
         right.columnconfigure(0, weight=1)
         right.rowconfigure(1, weight=1)
+
+        self._configure_tree_style()
 
         title = ttk.Label(left, text="篩選條件", font=("Microsoft JhengHei", 18, "bold"))
         title.pack(anchor="w", pady=(0, 12))
@@ -99,11 +101,11 @@ class StockFilterApp:
         table_frame.columnconfigure(0, weight=1)
         table_frame.rowconfigure(0, weight=1)
 
-        self.tree = ttk.Treeview(table_frame, columns=("code", "name"), show="headings", height=20)
+        self.tree = ttk.Treeview(table_frame, columns=("code", "name"), show="headings", height=20, style="Results.Treeview")
         self.tree.heading("code", text="股票代碼")
         self.tree.heading("name", text="股票名稱")
-        self.tree.column("code", width=140, anchor="center")
-        self.tree.column("name", width=260, anchor="w")
+        self.tree.column("code", width=180, anchor="center")
+        self.tree.column("name", width=360, anchor="w")
 
         scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
@@ -155,6 +157,13 @@ class StockFilterApp:
 
         self._checkbox_off_image = off
         self._checkbox_on_image = on
+
+    def _configure_tree_style(self) -> None:
+        style = ttk.Style()
+        base_font = ("Microsoft JhengHei", 20)
+        heading_font = ("Microsoft JhengHei", 20, "bold")
+        style.configure("Results.Treeview", font=base_font, rowheight=34)
+        style.configure("Results.Treeview.Heading", font=heading_font)
 
     def _selected_conditions(self) -> list[str]:
         return [key for key, var in self.vars.items() if var.get()]
