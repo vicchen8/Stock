@@ -1,0 +1,1 @@
+Date,Price,Volume,Upper,Middle,Lower,K,D,MA5,MA10,MA20,MA60
