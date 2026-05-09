@@ -23,7 +23,7 @@ CONDITIONS = {
     "price_above_ma20": Condition("price_above_ma20", "價格高於 20MA"),
     "price_above_ma60": Condition("price_above_ma60", "價格高於 60MA"),
     "price_above_middle": Condition("price_above_middle", "價格高於布林中線"),
-    "price_below_middle": Condition("price_below_middle", "價格低於中線"),
+    "price_below_middle": Condition("price_below_middle", "價格低於布林中線"),
     "volume_above_10m": Condition("volume_above_10m", "成交量大於 1000 萬"),
 }
 

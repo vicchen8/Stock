@@ -30,7 +30,7 @@ def _clear_old_price_files(folder: Path) -> int:
     return removed
 
 
-def fetch(stock_list_path: str | os.PathLike[str] = GOOD_STOCKS_FILE) -> dict:
+def fetch(stock_list_path: str | os.PathLike[str] = STOCKS_ID_FILE) -> dict:
     PRICE_FOLDER.mkdir(parents=True, exist_ok=True)
     removed_count = _clear_old_price_files(PRICE_FOLDER)
     if removed_count:
