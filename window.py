@@ -30,6 +30,7 @@ class StockFilterApp:
             "price_above_ma20": tk.BooleanVar(value=True),
             "price_above_ma60": tk.BooleanVar(value=True),
             "price_above_middle": tk.BooleanVar(value=True),
+            "price_below_middle": tk.BooleanVar(value=True),
             "volume_above_10m": tk.BooleanVar(value=True),
         }
 
@@ -68,6 +69,7 @@ class StockFilterApp:
         self._add_checkbox(left, "price_above_ma20")
         self._add_checkbox(left, "price_above_ma60")
         self._add_checkbox(left, "price_above_middle")
+        self._add_checkbox(left, "price_below_middle")
         self._add_checkbox(left, "volume_above_10m")
 
         ttk.Separator(left, orient="horizontal").pack(fill="x", pady=12)

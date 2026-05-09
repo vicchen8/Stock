@@ -22,7 +22,8 @@ CONDITIONS = {
     "price_above_ma10": Condition("price_above_ma10", "價格高於 10MA"),
     "price_above_ma20": Condition("price_above_ma20", "價格高於 20MA"),
     "price_above_ma60": Condition("price_above_ma60", "價格高於 60MA"),
-    "price_above_middle": Condition("price_above_middle", "價格高於中線"),
+    "price_above_middle": Condition("price_above_middle", "價格高於布林中線"),
+    "price_below_middle": Condition("price_below_middle", "價格低於中線"),
     "volume_above_10m": Condition("volume_above_10m", "成交量大於 1000 萬"),
 }
 
@@ -98,10 +99,15 @@ def _passes_condition(stock: pd.DataFrame, condition_key: str) -> bool:
         last_value = _get_last_value(stock, "MA60")
     elif condition_key == "price_above_middle":
         last_value = last_middle
+    elif condition_key == "price_below_middle":
+        last_value = last_middle
     elif condition_key == "volume_above_10m":
         return pd.notna(last_volume) and last_volume >= 10_000_000
     else:
         raise KeyError(f"Unknown condition: {condition_key}")
+
+    if condition_key == "price_below_middle":
+        return pd.notna(last_value) and pd.notna(last_price) and last_price <= last_value
 
     return pd.notna(last_value) and pd.notna(last_price) and last_price >= last_value
 
