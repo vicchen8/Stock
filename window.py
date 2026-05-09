@@ -24,9 +24,14 @@ class StockFilterApp:
         self.root.geometry("1200x760")
         self.root.minsize(980, 620)
 
-        self.var_ma5 = tk.BooleanVar(value=True)
-        self.var_middle = tk.BooleanVar(value=True)
-        self.var_volume = tk.BooleanVar(value=True)
+        self.vars = {
+            "price_above_ma5": tk.BooleanVar(value=True),
+            "price_above_ma10": tk.BooleanVar(value=True),
+            "price_above_ma20": tk.BooleanVar(value=True),
+            "price_above_ma60": tk.BooleanVar(value=True),
+            "price_above_middle": tk.BooleanVar(value=True),
+            "volume_above_10m": tk.BooleanVar(value=True),
+        }
 
         self.fetch_running = False
         self.fetch_last_time = self._load_last_fetch_time()
@@ -58,68 +63,12 @@ class StockFilterApp:
 
         self._create_checkbox_images()
 
-        self.chk_ma5 = tk.Checkbutton(
-            left,
-            text=stock_filter.CONDITIONS["price_above_ma5"].label,
-            variable=self.var_ma5,
-            command=self.run_filter,
-            image=self._checkbox_off_image,
-            selectimage=self._checkbox_on_image,
-            compound="left",
-            indicatoron=False,
-            selectcolor="#e8f7e8",
-            background="white",
-            activebackground="white",
-            relief="flat",
-            anchor="w",
-            padx=8,
-            pady=4,
-            borderwidth=0,
-            highlightthickness=0,
-        )
-        self.chk_ma5.pack(anchor="w", pady=4, fill="x")
-
-        self.chk_middle = tk.Checkbutton(
-            left,
-            text=stock_filter.CONDITIONS["price_above_middle"].label,
-            variable=self.var_middle,
-            command=self.run_filter,
-            image=self._checkbox_off_image,
-            selectimage=self._checkbox_on_image,
-            compound="left",
-            indicatoron=False,
-            selectcolor="#e8f7e8",
-            background="white",
-            activebackground="white",
-            relief="flat",
-            anchor="w",
-            padx=8,
-            pady=4,
-            borderwidth=0,
-            highlightthickness=0,
-        )
-        self.chk_middle.pack(anchor="w", pady=4, fill="x")
-
-        self.chk_volume = tk.Checkbutton(
-            left,
-            text=stock_filter.CONDITIONS["volume_above_10m"].label,
-            variable=self.var_volume,
-            command=self.run_filter,
-            image=self._checkbox_off_image,
-            selectimage=self._checkbox_on_image,
-            compound="left",
-            indicatoron=False,
-            selectcolor="#e8f7e8",
-            background="white",
-            activebackground="white",
-            relief="flat",
-            anchor="w",
-            padx=8,
-            pady=4,
-            borderwidth=0,
-            highlightthickness=0,
-        )
-        self.chk_volume.pack(anchor="w", pady=4, fill="x")
+        self._add_checkbox(left, "price_above_ma5")
+        self._add_checkbox(left, "price_above_ma10")
+        self._add_checkbox(left, "price_above_ma20")
+        self._add_checkbox(left, "price_above_ma60")
+        self._add_checkbox(left, "price_above_middle")
+        self._add_checkbox(left, "volume_above_10m")
 
         ttk.Separator(left, orient="horizontal").pack(fill="x", pady=12)
 
@@ -157,6 +106,28 @@ class StockFilterApp:
         self.summary_label = ttk.Label(right, text="", anchor="w")
         self.summary_label.grid(row=2, column=0, sticky="ew", pady=(10, 0))
 
+    def _add_checkbox(self, parent: tk.Widget, condition_key: str) -> None:
+        checkbox = tk.Checkbutton(
+            parent,
+            text=stock_filter.CONDITIONS[condition_key].label,
+            variable=self.vars[condition_key],
+            command=self.run_filter,
+            image=self._checkbox_off_image,
+            selectimage=self._checkbox_on_image,
+            compound="left",
+            indicatoron=False,
+            selectcolor="#e8f7e8",
+            background="white",
+            activebackground="white",
+            relief="flat",
+            anchor="w",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            highlightthickness=0,
+        )
+        checkbox.pack(anchor="w", pady=4, fill="x")
+
     def _create_checkbox_images(self) -> None:
         off = tk.PhotoImage(width=16, height=16)
         off.put("#ffffff", to=(0, 0, 16, 16))
@@ -178,14 +149,7 @@ class StockFilterApp:
         self._checkbox_on_image = on
 
     def _selected_conditions(self) -> list[str]:
-        selected = []
-        if self.var_ma5.get():
-            selected.append("price_above_ma5")
-        if self.var_middle.get():
-            selected.append("price_above_middle")
-        if self.var_volume.get():
-            selected.append("volume_above_10m")
-        return selected
+        return [key for key, var in self.vars.items() if var.get()]
 
     def run_filter(self) -> None:
         try:

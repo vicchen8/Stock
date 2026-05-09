@@ -19,6 +19,9 @@ class Condition:
 
 CONDITIONS = {
     "price_above_ma5": Condition("price_above_ma5", "價格高於 5MA"),
+    "price_above_ma10": Condition("price_above_ma10", "價格高於 10MA"),
+    "price_above_ma20": Condition("price_above_ma20", "價格高於 20MA"),
+    "price_above_ma60": Condition("price_above_ma60", "價格高於 60MA"),
     "price_above_middle": Condition("price_above_middle", "價格高於中線"),
     "volume_above_10m": Condition("volume_above_10m", "成交量大於 1000 萬"),
 }
@@ -42,9 +45,6 @@ def _load_stock_data(price_file: Path) -> pd.DataFrame:
     if stock.empty:
         return stock
 
-    # 支援兩種格式：
-    # 1. fetch 產生的 3 欄：Date, Price, Volume
-    # 2. calculate 產生的 12 欄：Date, Price, Volume, Upper, Middle, Lower, K, D, MA5, MA10, MA20, MA60
     if stock.shape[1] >= 12:
         stock = stock.iloc[:, :12].copy()
         stock.columns = [
@@ -73,31 +73,37 @@ def _load_stock_data(price_file: Path) -> pd.DataFrame:
 
     stock["Middle"] = stock["Price"].rolling(window=30).mean()
     stock["MA5"] = stock["Price"].rolling(window=5).mean()
+    stock["MA10"] = stock["Price"].rolling(window=10).mean()
+    stock["MA20"] = stock["Price"].rolling(window=20).mean()
+    stock["MA60"] = stock["Price"].rolling(window=60).mean()
     return stock
 
 
-def _get_last_value(stock: pd.DataFrame, column_name: str) -> float:
+def _get_last_value(stock: pd.DataFrame, column_name: str):
     return stock[column_name].iloc[-1]
 
 
 def _passes_condition(stock: pd.DataFrame, condition_key: str) -> bool:
     last_price = _get_last_value(stock, "Price")
     last_volume = _get_last_value(stock, "Volume")
-
-    if stock.shape[1] >= 12:
-        last_middle = _get_last_value(stock, "Middle")
-        last_ma5 = _get_last_value(stock, "MA5")
-    else:
-        last_middle = _get_last_value(stock, "Middle")
-        last_ma5 = _get_last_value(stock, "MA5")
+    last_middle = _get_last_value(stock, "Middle")
 
     if condition_key == "price_above_ma5":
-        return pd.notna(last_ma5) and pd.notna(last_price) and last_price >= last_ma5
-    if condition_key == "price_above_middle":
-        return pd.notna(last_middle) and pd.notna(last_price) and last_price >= last_middle
-    if condition_key == "volume_above_10m":
+        last_value = _get_last_value(stock, "MA5")
+    elif condition_key == "price_above_ma10":
+        last_value = _get_last_value(stock, "MA10")
+    elif condition_key == "price_above_ma20":
+        last_value = _get_last_value(stock, "MA20")
+    elif condition_key == "price_above_ma60":
+        last_value = _get_last_value(stock, "MA60")
+    elif condition_key == "price_above_middle":
+        last_value = last_middle
+    elif condition_key == "volume_above_10m":
         return pd.notna(last_volume) and last_volume >= 10_000_000
-    raise KeyError(f"Unknown condition: {condition_key}")
+    else:
+        raise KeyError(f"Unknown condition: {condition_key}")
+
+    return pd.notna(last_value) and pd.notna(last_price) and last_price >= last_value
 
 
 def filter_stocks(enabled_conditions: Iterable[str] | None = None) -> pd.DataFrame:
