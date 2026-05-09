@@ -29,6 +29,8 @@ class StockFilterApp:
         self.fetch_running = False
         self.fetch_last_time = self._load_last_fetch_time()
         self.fetch_last_summary = self._load_last_fetch_summary()
+        self._checkbox_off_image = None
+        self._checkbox_on_image = None
 
         self._build_ui()
         self.run_filter()
@@ -50,26 +52,70 @@ class StockFilterApp:
         title = ttk.Label(left, text="篩選條件", font=("Microsoft JhengHei", 18, "bold"))
         title.pack(anchor="w", pady=(0, 12))
 
-        ttk.Checkbutton(
+        self._create_checkbox_images()
+
+        self.chk_ma5 = tk.Checkbutton(
             left,
             text=stock_filter.CONDITIONS["price_above_ma5"].label,
             variable=self.var_ma5,
             command=self.run_filter,
-        ).pack(anchor="w", pady=4)
+            image=self._checkbox_off_image,
+            selectimage=self._checkbox_on_image,
+            compound="left",
+            indicatoron=False,
+            selectcolor="#e8f7e8",
+            background="white",
+            activebackground="white",
+            relief="flat",
+            anchor="w",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            highlightthickness=0,
+        )
+        self.chk_ma5.pack(anchor="w", pady=4, fill="x")
 
-        ttk.Checkbutton(
+        self.chk_middle = tk.Checkbutton(
             left,
             text=stock_filter.CONDITIONS["price_above_middle"].label,
             variable=self.var_middle,
             command=self.run_filter,
-        ).pack(anchor="w", pady=4)
+            image=self._checkbox_off_image,
+            selectimage=self._checkbox_on_image,
+            compound="left",
+            indicatoron=False,
+            selectcolor="#e8f7e8",
+            background="white",
+            activebackground="white",
+            relief="flat",
+            anchor="w",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            highlightthickness=0,
+        )
+        self.chk_middle.pack(anchor="w", pady=4, fill="x")
 
-        ttk.Checkbutton(
+        self.chk_volume = tk.Checkbutton(
             left,
             text=stock_filter.CONDITIONS["volume_above_10m"].label,
             variable=self.var_volume,
             command=self.run_filter,
-        ).pack(anchor="w", pady=4)
+            image=self._checkbox_off_image,
+            selectimage=self._checkbox_on_image,
+            compound="left",
+            indicatoron=False,
+            selectcolor="#e8f7e8",
+            background="white",
+            activebackground="white",
+            relief="flat",
+            anchor="w",
+            padx=8,
+            pady=4,
+            borderwidth=0,
+            highlightthickness=0,
+        )
+        self.chk_volume.pack(anchor="w", pady=4, fill="x")
 
         ttk.Separator(left, orient="horizontal").pack(fill="x", pady=12)
 
@@ -106,6 +152,27 @@ class StockFilterApp:
 
         self.summary_label = ttk.Label(right, text="", anchor="w")
         self.summary_label.grid(row=2, column=0, sticky="ew", pady=(10, 0))
+
+    def _create_checkbox_images(self) -> None:
+        off = tk.PhotoImage(width=16, height=16)
+        off.put("#ffffff", to=(0, 0, 16, 16))
+        off.put("#8b8b8b", to=(0, 0, 16, 1))
+        off.put("#8b8b8b", to=(0, 0, 1, 16))
+        off.put("#8b8b8b", to=(15, 0, 16, 16))
+        off.put("#8b8b8b", to=(0, 15, 16, 16))
+
+        on = tk.PhotoImage(width=16, height=16)
+        on.put("#ffffff", to=(0, 0, 16, 16))
+        on.put("#3aa655", to=(0, 0, 16, 1))
+        on.put("#3aa655", to=(0, 0, 1, 16))
+        on.put("#3aa655", to=(15, 0, 16, 16))
+        on.put("#3aa655", to=(0, 15, 16, 16))
+        # 綠色勾勾
+        on.put("#3aa655", to=(4, 8, 7, 11))
+        on.put("#3aa655", to=(7, 11, 13, 5))
+
+        self._checkbox_off_image = off
+        self._checkbox_on_image = on
 
     def _selected_conditions(self) -> list[str]:
         selected = []

@@ -7,8 +7,8 @@ from typing import Iterable
 import pandas as pd
 
 
-STOCK_ID_FILE = Path("stocks_ID.csv")
 PRICE_FOLDER = Path("stocks_price")
+STOCK_COLUMNS = ["股票代碼", "股票名稱"]
 
 
 @dataclass(frozen=True)
@@ -22,10 +22,6 @@ CONDITIONS = {
     "price_above_middle": Condition("price_above_middle", "價格高於中線"),
     "volume_above_10m": Condition("volume_above_10m", "成交量大於 1000 萬"),
 }
-
-
-def _read_stock_list() -> pd.DataFrame:
-    return pd.read_csv(STOCK_ID_FILE, encoding="utf-8-sig")
 
 
 def _get_last_value(stock: pd.DataFrame, column_index: int) -> float:
@@ -47,15 +43,26 @@ def _passes_condition(stock: pd.DataFrame, condition_key: str) -> bool:
     raise KeyError(f"Unknown condition: {condition_key}")
 
 
+def _iter_price_files() -> list[Path]:
+    if not PRICE_FOLDER.exists():
+        return []
+    return sorted(PRICE_FOLDER.glob("*.csv"))
+
+
+def _parse_stock_file_name(path: Path) -> tuple[str, str]:
+    stem = path.stem
+    if "_" not in stem:
+        return stem, ""
+    code, name = stem.split("_", 1)
+    return code, name
+
+
 def filter_stocks(enabled_conditions: Iterable[str] | None = None) -> pd.DataFrame:
     enabled_conditions = list(enabled_conditions or [])
-    stock_list = _read_stock_list()
 
     passed_rows = []
-    for _, row in stock_list.iterrows():
-        code = str(row["股票代碼"]).zfill(4)
-        name = str(row["股票名稱"])
-        price_file = PRICE_FOLDER / f"{code}_{name}.csv"
+    for price_file in _iter_price_files():
+        code, name = _parse_stock_file_name(price_file)
 
         try:
             stock = pd.read_csv(price_file, header=None)
@@ -63,12 +70,11 @@ def filter_stocks(enabled_conditions: Iterable[str] | None = None) -> pd.DataFra
                 continue
 
             if all(_passes_condition(stock, condition_key) for condition_key in enabled_conditions):
-                passed_rows.append(row)
+                passed_rows.append({"股票代碼": code, "股票名稱": name})
         except Exception:
             continue
 
-    result = pd.DataFrame(passed_rows, columns=stock_list.columns)
-    return result
+    return pd.DataFrame(passed_rows, columns=STOCK_COLUMNS)
 
 
 def filter() -> None:
