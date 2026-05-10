@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Callable
+from app_paths import writable_path
 
 
 def get_tick(price):
@@ -50,7 +51,7 @@ def process_file(filepath):
 
 
 def rounder(progress_callback: Callable[[int, int], None] | None = None):
-    folder = "stocks_price"
+    folder = writable_path("stocks_price")
     filenames = [name for name in os.listdir(folder) if name.endswith(".csv")]
     total = len(filenames)
 

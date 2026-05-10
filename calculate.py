@@ -4,10 +4,11 @@ import os
 from typing import Callable
 
 import pandas as pd
+from app_paths import writable_path
 
 
 def calculate(progress_callback: Callable[[int, int], None] | None = None):
-    folder = "stocks_price"
+    folder = writable_path("stocks_price")
     os.makedirs(folder, exist_ok=True)
 
     n = 30
@@ -36,10 +37,11 @@ def calculate(progress_callback: Callable[[int, int], None] | None = None):
         df["MA5"] = df["Price"].rolling(window=5).mean()
         df["MA10"] = df["Price"].rolling(window=10).mean()
         df["MA20"] = df["Price"].rolling(window=20).mean()
+        df["MA30"] = df["Price"].rolling(window=30).mean()
         df["MA60"] = df["Price"].rolling(window=60).mean()
 
         df.iloc[:-1, 3:] = None
-        df = df[["Date", "Price", "Volume", "Upper", "Middle", "Lower", "K", "D", "MA5", "MA10", "MA20", "MA60"]]
+        df = df[["Date", "Price", "Volume", "Upper", "Middle", "Lower", "K", "D", "MA5", "MA10", "MA20", "MA30", "MA60"]]
 
         df.to_csv(filepath, index=False, header=False)
         print(f"Calculated {filename}")

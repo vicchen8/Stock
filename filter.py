@@ -6,8 +6,10 @@ from typing import Iterable
 
 import pandas as pd
 
+from app_paths import writable_path
 
-PRICE_FOLDER = Path("stocks_price")
+
+PRICE_FOLDER = writable_path("stocks_price")
 STOCK_COLUMNS = ["股票代碼", "股票名稱"]
 
 
@@ -21,6 +23,7 @@ CONDITIONS = {
     "price_above_ma5": Condition("price_above_ma5", "價格高於 5MA"),
     "price_above_ma10": Condition("price_above_ma10", "價格高於 10MA"),
     "price_above_ma20": Condition("price_above_ma20", "價格高於 20MA"),
+    "price_above_ma30": Condition("price_above_ma30", "價格高於 30MA"),
     "price_above_ma60": Condition("price_above_ma60", "價格高於 60MA"),
     "price_above_middle": Condition("price_above_middle", "價格高於布林中線"),
     "price_below_middle": Condition("price_below_middle", "價格低於布林中線"),
@@ -44,6 +47,25 @@ def _parse_stock_file_name(path: Path) -> tuple[str, str]:
 def _load_stock_data(price_file: Path) -> pd.DataFrame:
     stock = pd.read_csv(price_file, header=None)
     if stock.empty:
+        return stock
+
+    if stock.shape[1] >= 13:
+        stock = stock.iloc[:, :13].copy()
+        stock.columns = [
+            "Date",
+            "Price",
+            "Volume",
+            "Upper",
+            "Middle",
+            "Lower",
+            "K",
+            "D",
+            "MA5",
+            "MA10",
+            "MA20",
+            "MA30",
+            "MA60",
+        ]
         return stock
 
     if stock.shape[1] >= 12:
@@ -76,6 +98,7 @@ def _load_stock_data(price_file: Path) -> pd.DataFrame:
     stock["MA5"] = stock["Price"].rolling(window=5).mean()
     stock["MA10"] = stock["Price"].rolling(window=10).mean()
     stock["MA20"] = stock["Price"].rolling(window=20).mean()
+    stock["MA30"] = stock["Price"].rolling(window=30).mean()
     stock["MA60"] = stock["Price"].rolling(window=60).mean()
     return stock
 
@@ -95,6 +118,10 @@ def _passes_condition(stock: pd.DataFrame, condition_key: str) -> bool:
         last_value = _get_last_value(stock, "MA10")
     elif condition_key == "price_above_ma20":
         last_value = _get_last_value(stock, "MA20")
+    elif condition_key == "price_above_ma30":
+        if "MA30" not in stock.columns:
+            return False
+        last_value = _get_last_value(stock, "MA30")
     elif condition_key == "price_above_ma60":
         last_value = _get_last_value(stock, "MA60")
     elif condition_key == "price_above_middle":

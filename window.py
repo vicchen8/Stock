@@ -12,9 +12,10 @@ import calculate
 import fetch
 import filter as stock_filter
 import rounder
+from app_paths import writable_path
 
 
-STATE_FILE = Path("fetch_state.json")
+STATE_FILE = writable_path("fetch_state.json")
 
 
 class StockFilterApp:
@@ -28,6 +29,7 @@ class StockFilterApp:
             "price_above_ma5": tk.BooleanVar(value=False),
             "price_above_ma10": tk.BooleanVar(value=False),
             "price_above_ma20": tk.BooleanVar(value=False),
+            "price_above_ma30": tk.BooleanVar(value=False),
             "price_above_ma60": tk.BooleanVar(value=False),
             "price_above_middle": tk.BooleanVar(value=False),
             "price_below_middle": tk.BooleanVar(value=False),
@@ -69,6 +71,7 @@ class StockFilterApp:
         self._add_checkbox(left, "price_above_ma5")
         self._add_checkbox(left, "price_above_ma10")
         self._add_checkbox(left, "price_above_ma20")
+        self._add_checkbox(left, "price_above_ma30")
         self._add_checkbox(left, "price_above_ma60")
         self._add_checkbox(left, "price_above_middle")
         self._add_checkbox(left, "price_below_middle")

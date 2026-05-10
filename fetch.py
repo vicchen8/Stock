@@ -7,11 +7,12 @@ from typing import Callable
 
 import pandas as pd
 import yfinance as yf
+from app_paths import resource_path, writable_path
 
 
-GOOD_STOCKS_FILE = Path("good_stocks.csv")
-STOCKS_ID_FILE = Path("stocks_ID.csv")
-PRICE_FOLDER = Path("stocks_price")
+GOOD_STOCKS_FILE = resource_path("good_stocks.csv")
+STOCKS_ID_FILE = resource_path("stocks_ID.csv")
+PRICE_FOLDER = writable_path("stocks_price")
 
 
 def _load_stock_list(stock_list_path: str | os.PathLike[str]) -> pd.DataFrame:
